@@ -12,20 +12,25 @@ type MovePair = {
   blackIdx: number;
 };
 
-// صور القطع من Lichess CDN - مضمونة 100%
+// روابط صور القطع من CDN قوي + fallback نصي
 const PIECE_IMAGES: Record<string, string> = {
-  wP: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wp.svg",
-  wN: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wn.svg",
-  wB: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wb.svg",
-  wR: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wr.svg",
-  wQ: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wq.svg",
-  wK: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wk.svg",
-  bP: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bp.svg",
-  bN: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bn.svg",
-  bB: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bb.svg",
-  bR: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/br.svg",
-  bQ: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bq.svg",
-  bK: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bk.svg",
+  wP: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wP.svg",
+  wN: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wN.svg",
+  wB: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wB.svg",
+  wR: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wR.svg",
+  wQ: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wQ.svg",
+  wK: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wK.svg",
+  bP: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bP.svg",
+  bN: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bN.svg",
+  bB: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bB.svg",
+  bR: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bR.svg",
+  bQ: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bQ.svg",
+  bK: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bK.svg",
+};
+
+const PIECE_NAMES: Record<string, string> = {
+  wP: "♙", wN: "♘", wB: "♗", wR: "♖", wQ: "♕", wK: "♔",
+  bP: "♟", bN: "♞", bB: "♝", bR: "♜", bQ: "♛", bK: "♚",
 };
 
 export default function PgnAnalyzer() {
@@ -57,7 +62,7 @@ export default function PgnAnalyzer() {
       const tempGame = new Chess();
       const valid = tempGame.loadPgn(pgnInput);
       if (!valid) {
-        alert("ملف PGN غير صالح!");
+        alert("ملف PGN غير صالح! يرجى التأكد من نص المباراة.");
         return;
       }
       const history = tempGame.history();
@@ -105,24 +110,44 @@ export default function PgnAnalyzer() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentMoveIndex, moveHistory, goToMove]);
 
-  // customPieces - الصور المضمونة من Lichess
+  // customPieces مع fallback نصي إذا فشلت الصورة
   const customPieces = useMemo(() => {
     const pieces = Object.keys(PIECE_IMAGES);
     const result: Record<string, React.FC<{ squareWidth: number }>> = {};
     pieces.forEach((piece) => {
       result[piece] = ({ squareWidth }: { squareWidth: number }) => (
-        <img
-          src={PIECE_IMAGES[piece]}
-          alt={piece}
-          width={squareWidth}
-          height={squareWidth}
+        <div
           style={{
             width: squareWidth,
             height: squareWidth,
-            display: "block",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: squareWidth * 0.8,
+            lineHeight: 1,
+            userSelect: "none",
           }}
-          draggable={false}
-        />
+        >
+          <img
+            src={PIECE_IMAGES[piece]}
+            alt={piece}
+            width={squareWidth}
+            height={squareWidth}
+            style={{
+              width: squareWidth,
+              height: squareWidth,
+              display: "block",
+              position: "absolute",
+            }}
+            draggable={false}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+          <span style={{ position: "absolute", zIndex: -1 }}>
+            {PIECE_NAMES[piece]}
+          </span>
+        </div>
       );
     });
     return result;
