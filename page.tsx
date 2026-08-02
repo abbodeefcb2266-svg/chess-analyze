@@ -11,16 +11,11 @@ type MovePair = {
   blackIdx: number;
 };
 
-// رموز القطع (مضمونة على كل المتصفحات)
 const PIECE_SYMBOLS: Record<string, string> = {
   K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
   k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟",
 };
 
-const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
-const RANKS = ["8", "7", "6", "5", "4", "3", "2", "1"];
-
-// تحويل FEN إلى مصفوفة 8x8
 function parseFen(fen: string): (string | null)[][] {
   const rows = fen.split(" ")[0].split("/");
   const board: (string | null)[][] = [];
@@ -79,7 +74,6 @@ export default function PgnAnalyzer() {
       setCurrentMoveIndex(-1);
     } catch (e) {
       alert("ملف PGN غير صالح! يرجى التأكد من نص المباراة.");
-      console.error("PGN Error:", e);
     }
   };
 
@@ -150,26 +144,28 @@ export default function PgnAnalyzer() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start text-right">
           <div className="flex flex-col items-center">
-            {/* الرقعة مبنية من الصفر — لا صور ولا CDN */}
+            {/* الرقعة مبنية من الصفر */}
             <div className="w-full max-w-[400px] mx-auto aspect-square border-2 border-slate-700 rounded overflow-hidden shadow-2xl">
               <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
-                {RANKS.map((rank, rankIdx) =>
-                  FILES.map((file, fileIdx) => {
-                    const piece = board[rankIdx][fileIdx];
-                    const isLight = (rankIdx + fileIdx) % 2 === 0;
+                {Array.from({ length: 8 }, (_, r) =>
+                  Array.from({ length: 8 }, (_, c) => {
+                    const piece = board[r][c];
+                    const isLight = (r + c) % 2 === 0;
                     return (
                       <div
-                        key={`${file}${rank}`}
-                        className={`flex items-center justify-center text-4xl md:text-5xl select-none ${
-                          isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]"
-                        }`}
+                        key={`${r}-${c}`}
+                        className="flex items-center justify-center select-none"
+                        style={{
+                          backgroundColor: isLight ? "#f0d9b5" : "#b58863",
+                          fontSize: "clamp(1.5rem, 10vw, 3rem)",
+                        }}
                       >
                         {piece && (
                           <span
-                            className="text-slate-900 font-serif"
+                            className="font-serif"
                             style={{
                               textShadow: "0 0 3px #fff, 0 0 6px #fff",
-                              fontSize: "clamp(1.5rem, 10vw, 3rem)",
+                              color: "#1a1a1a",
                             }}
                           >
                             {PIECE_SYMBOLS[piece] || piece}
