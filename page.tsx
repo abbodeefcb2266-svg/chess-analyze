@@ -12,13 +12,28 @@ type MovePair = {
   blackIdx: number;
 };
 
+// صور القطع من Lichess CDN - مضمونة 100%
+const PIECE_IMAGES: Record<string, string> = {
+  wP: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wp.svg",
+  wN: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wn.svg",
+  wB: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wb.svg",
+  wR: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wr.svg",
+  wQ: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wq.svg",
+  wK: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/wk.svg",
+  bP: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bp.svg",
+  bN: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bn.svg",
+  bB: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bb.svg",
+  bR: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/br.svg",
+  bQ: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bq.svg",
+  bK: "https://lichess1.org/assets/_bpxw7b/piece/cburnett/bk.svg",
+};
+
 export default function PgnAnalyzer() {
   const [game, setGame] = useState<Chess>(new Chess());
   const [pgnInput, setPgnInput] = useState<string>("");
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number>(-1);
 
-  // تحويل سجل النقلات إلى أزواج (أبيض/أسود)
   const movePairs = useMemo<MovePair[]>(() => {
     const pairs: MovePair[] = [];
     for (let i = 0; i < moveHistory.length; i += 2) {
@@ -33,7 +48,6 @@ export default function PgnAnalyzer() {
     return pairs;
   }, [moveHistory]);
 
-  // استيراد مباراة الـ PGN
   const handlePgnImport = () => {
     if (!pgnInput.trim()) {
       alert("الرجاء إدخال نص PGN أولاً");
@@ -43,10 +57,9 @@ export default function PgnAnalyzer() {
       const tempGame = new Chess();
       const valid = tempGame.loadPgn(pgnInput);
       if (!valid) {
-        alert("ملف PGN غير صالح! يرجى التأكد من نص المباراة.");
+        alert("ملف PGN غير صالح!");
         return;
       }
-
       const history = tempGame.history();
       setMoveHistory(history);
       setGame(new Chess());
@@ -57,7 +70,6 @@ export default function PgnAnalyzer() {
     }
   };
 
-  // إعادة تحميل / تصفير البيانات
   const handleReset = () => {
     setGame(new Chess());
     setPgnInput("");
@@ -65,7 +77,6 @@ export default function PgnAnalyzer() {
     setCurrentMoveIndex(-1);
   };
 
-  // دالة التقديم والترجيع
   const goToMove = useCallback(
     (index: number) => {
       if (index < -1 || index >= moveHistory.length) return;
@@ -79,71 +90,41 @@ export default function PgnAnalyzer() {
     [moveHistory]
   );
 
-  // التحكم عن طريق أسهم الكيبورد
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (moveHistory.length === 0) return;
-
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        goToMove(currentMoveIndex - 1); // ترجيع
+        goToMove(currentMoveIndex - 1);
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        goToMove(currentMoveIndex + 1); // تقديم
+        goToMove(currentMoveIndex + 1);
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentMoveIndex, moveHistory, goToMove]);
 
-  // صور القطع من Lichess CDN (تضمن عدم ظهور علامات الاستفهام)
+  // customPieces - الصور المضمونة من Lichess
   const customPieces = useMemo(() => {
-    const pieces = [
-      "wP",
-      "wN",
-      "wB",
-      "wR",
-      "wQ",
-      "wK",
-      "bP",
-      "bN",
-      "bB",
-      "bR",
-      "bQ",
-      "bK",
-    ] as const;
-    const pieceMap: Record<string, string> = {
-      wP: "wp",
-      wN: "wn",
-      wB: "wb",
-      wR: "wr",
-      wQ: "wq",
-      wK: "wk",
-      bP: "bp",
-      bN: "bn",
-      bB: "bb",
-      bR: "br",
-      bQ: "bq",
-      bK: "bk",
-    };
-
+    const pieces = Object.keys(PIECE_IMAGES);
     const result: Record<string, React.FC<{ squareWidth: number }>> = {};
-
     pieces.forEach((piece) => {
-      const Component = ({ squareWidth }: { squareWidth: number }) => (
+      result[piece] = ({ squareWidth }: { squareWidth: number }) => (
         <img
-          src={`https://lichess1.org/assets/_bpxw7b/piece/cburnett/${pieceMap[piece]}.svg`}
+          src={PIECE_IMAGES[piece]}
           alt={piece}
           width={squareWidth}
           height={squareWidth}
-          style={{ width: squareWidth, height: squareWidth, display: "block" }}
+          style={{
+            width: squareWidth,
+            height: squareWidth,
+            display: "block",
+          }}
           draggable={false}
         />
       );
-      result[piece] = Component;
     });
-
     return result;
   }, []);
 
@@ -157,7 +138,6 @@ export default function PgnAnalyzer() {
           محلل نقلات الشطرنج
         </h1>
 
-        {/* حقل إدخال الـ PGN */}
         <div className="bg-slate-900 p-4 rounded-xl space-y-3 border border-slate-800">
           <textarea
             className="w-full bg-slate-950 p-3 text-xs font-mono text-sky-300 rounded border border-slate-800 text-left focus:outline-none focus:border-sky-500 transition"
@@ -170,32 +150,31 @@ export default function PgnAnalyzer() {
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <button
               onClick={handlePgnImport}
-              className="bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white py-2 px-6 rounded font-medium transition w-full sm:w-auto"
+              className="bg-sky-600 hover:bg-sky-500 text-white py-2 px-6 rounded font-medium transition w-full sm:w-auto"
             >
               عرض المباراة وتحليل النقلات
             </button>
             <button
               onClick={handleReset}
-              className="bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white py-2 px-6 rounded font-medium transition w-full sm:w-auto"
+              className="bg-rose-600 hover:bg-rose-500 text-white py-2 px-6 rounded font-medium transition w-full sm:w-auto"
             >
               🔄 إعادة تحميل / مسح
             </button>
           </div>
         </div>
 
-        {/* عرض الرقعة وسجل النقلات */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start text-right">
-          {/* الرقعة مع أزرار التحكم */}
           <div className="flex flex-col items-center">
             <div className="w-full max-w-[400px] mx-auto">
               <Chessboard
                 position={game.fen()}
                 customPieces={customPieces}
                 boardWidth={400}
+                customDarkSquareStyle={{ backgroundColor: "#b58863" }}
+                customLightSquareStyle={{ backgroundColor: "#f0d9b5" }}
               />
             </div>
 
-            {/* أزرار التنقل */}
             {moveHistory.length > 0 && (
               <div className="flex gap-2 mt-4 flex-wrap justify-center" dir="ltr">
                 <button
@@ -230,7 +209,6 @@ export default function PgnAnalyzer() {
             )}
           </div>
 
-          {/* سجل النقلات */}
           <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 max-h-[450px] overflow-y-auto">
             <h3 className="text-lg font-semibold text-sky-400 mb-3 border-b border-slate-800 pb-2">
               سجل النقلات ({moveHistory.length})
