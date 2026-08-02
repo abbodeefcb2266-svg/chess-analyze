@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Chess } from "chess.js";
-import { Chessboard } from "react-chessboard";
 
 type MovePair = {
   num: number;
@@ -12,32 +11,41 @@ type MovePair = {
   blackIdx: number;
 };
 
-// روابط صور القطع من CDN قوي + fallback نصي
-const PIECE_IMAGES: Record<string, string> = {
-  wP: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wP.svg",
-  wN: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wN.svg",
-  wB: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wB.svg",
-  wR: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wR.svg",
-  wQ: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wQ.svg",
-  wK: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/wK.svg",
-  bP: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bP.svg",
-  bN: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bN.svg",
-  bB: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bB.svg",
-  bR: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bR.svg",
-  bQ: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bQ.svg",
-  bK: "https://cdn.jsdelivr.net/gh/lichess-org/lila/public/piece/cburnett/bK.svg",
+// رموز القطع (مضمونة على كل المتصفحات)
+const PIECE_SYMBOLS: Record<string, string> = {
+  K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘", P: "♙",
+  k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟",
 };
 
-const PIECE_NAMES: Record<string, string> = {
-  wP: "♙", wN: "♘", wB: "♗", wR: "♖", wQ: "♕", wK: "♔",
-  bP: "♟", bN: "♞", bB: "♝", bR: "♜", bQ: "♛", bK: "♚",
-};
+const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
+const RANKS = ["8", "7", "6", "5", "4", "3", "2", "1"];
+
+// تحويل FEN إلى مصفوفة 8x8
+function parseFen(fen: string): (string | null)[][] {
+  const rows = fen.split(" ")[0].split("/");
+  const board: (string | null)[][] = [];
+  for (const row of rows) {
+    const boardRow: (string | null)[] = [];
+    for (const char of row) {
+      if (/\d/.test(char)) {
+        const emptyCount = parseInt(char);
+        for (let i = 0; i < emptyCount; i++) boardRow.push(null);
+      } else {
+        boardRow.push(char);
+      }
+    }
+    board.push(boardRow);
+  }
+  return board;
+}
 
 export default function PgnAnalyzer() {
   const [game, setGame] = useState<Chess>(new Chess());
   const [pgnInput, setPgnInput] = useState<string>("");
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number>(-1);
+
+  const board = useMemo(() => parseFen(game.fen()), [game.fen()]);
 
   const movePairs = useMemo<MovePair[]>(() => {
     const pairs: MovePair[] = [];
@@ -110,58 +118,10 @@ export default function PgnAnalyzer() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [currentMoveIndex, moveHistory, goToMove]);
 
-  // customPieces مع fallback نصي إذا فشلت الصورة
-  const customPieces = useMemo(() => {
-    const pieces = Object.keys(PIECE_IMAGES);
-    const result: Record<string, React.FC<{ squareWidth: number }>> = {};
-    pieces.forEach((piece) => {
-      result[piece] = ({ squareWidth }: { squareWidth: number }) => (
-        <div
-          style={{
-            width: squareWidth,
-            height: squareWidth,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: squareWidth * 0.8,
-            lineHeight: 1,
-            userSelect: "none",
-          }}
-        >
-          <img
-            src={PIECE_IMAGES[piece]}
-            alt={piece}
-            width={squareWidth}
-            height={squareWidth}
-            style={{
-              width: squareWidth,
-              height: squareWidth,
-              display: "block",
-              position: "absolute",
-            }}
-            draggable={false}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-          <span style={{ position: "absolute", zIndex: -1 }}>
-            {PIECE_NAMES[piece]}
-          </span>
-        </div>
-      );
-    });
-    return result;
-  }, []);
-
   return (
-    <main
-      className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8"
-      dir="rtl"
-    >
+    <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-6 text-center">
-        <h1 className="text-3xl font-bold text-sky-400 mb-6">
-          محلل نقلات الشطرنج
-        </h1>
+        <h1 className="text-3xl font-bold text-sky-400 mb-6">محلل نقلات الشطرنج</h1>
 
         <div className="bg-slate-900 p-4 rounded-xl space-y-3 border border-slate-800">
           <textarea
@@ -190,14 +150,36 @@ export default function PgnAnalyzer() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start text-right">
           <div className="flex flex-col items-center">
-            <div className="w-full max-w-[400px] mx-auto">
-              <Chessboard
-                position={game.fen()}
-                customPieces={customPieces}
-                boardWidth={400}
-                customDarkSquareStyle={{ backgroundColor: "#b58863" }}
-                customLightSquareStyle={{ backgroundColor: "#f0d9b5" }}
-              />
+            {/* الرقعة مبنية من الصفر — لا صور ولا CDN */}
+            <div className="w-full max-w-[400px] mx-auto aspect-square border-2 border-slate-700 rounded overflow-hidden shadow-2xl">
+              <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
+                {RANKS.map((rank, rankIdx) =>
+                  FILES.map((file, fileIdx) => {
+                    const piece = board[rankIdx][fileIdx];
+                    const isLight = (rankIdx + fileIdx) % 2 === 0;
+                    return (
+                      <div
+                        key={`${file}${rank}`}
+                        className={`flex items-center justify-center text-4xl md:text-5xl select-none ${
+                          isLight ? "bg-[#f0d9b5]" : "bg-[#b58863]"
+                        }`}
+                      >
+                        {piece && (
+                          <span
+                            className="text-slate-900 font-serif"
+                            style={{
+                              textShadow: "0 0 3px #fff, 0 0 6px #fff",
+                              fontSize: "clamp(1.5rem, 10vw, 3rem)",
+                            }}
+                          >
+                            {PIECE_SYMBOLS[piece] || piece}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             {moveHistory.length > 0 && (
@@ -244,20 +226,12 @@ export default function PgnAnalyzer() {
               </p>
             ) : (
               <div className="grid grid-cols-3 gap-1 text-xs font-mono" dir="ltr">
-                <div className="text-slate-500 font-bold p-1.5 text-center sticky top-0 bg-slate-900">
-                  #
-                </div>
-                <div className="text-slate-400 font-bold p-1.5 text-center sticky top-0 bg-slate-900">
-                  أبيض
-                </div>
-                <div className="text-slate-400 font-bold p-1.5 text-center sticky top-0 bg-slate-900">
-                  أسود
-                </div>
+                <div className="text-slate-500 font-bold p-1.5 text-center sticky top-0 bg-slate-900">#</div>
+                <div className="text-slate-400 font-bold p-1.5 text-center sticky top-0 bg-slate-900">أبيض</div>
+                <div className="text-slate-400 font-bold p-1.5 text-center sticky top-0 bg-slate-900">أسود</div>
                 {movePairs.map((m) => (
                   <React.Fragment key={m.num}>
-                    <div className="text-slate-500 p-1.5 text-center">
-                      {m.num}.
-                    </div>
+                    <div className="text-slate-500 p-1.5 text-center">{m.num}.</div>
                     <button
                       onClick={() => goToMove(m.whiteIdx)}
                       className={`p-1.5 rounded transition text-center ${
